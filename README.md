@@ -26,7 +26,7 @@ Follow these steps to set up the project locally:
 
 ### Step 1: Clone the Repository
 ```sh
-git clone https://github.com/shaibiii-as/Filament-Vite-Challenge
+git clone https://github.com/umair-afzal-uat/Filament-Vite-Challenge
 cd filament-vite-challenge
 ```
 
@@ -113,10 +113,10 @@ This project is licensed under the MIT License. Feel free to modify and distribu
 ## Contact
 For questions or support, contact:
 
-- **Name**:  Shoaib
-- **Email**: shaibii.mu@gmail.com
+- **Name**:  Umair Afzal
+- **Email**: umairafzalphp@gmail.com
 
-- **GitHub**: [Filament-Vite-Challenge](https://github.com/shaibiii-as/Filament-Vite-Challenge)
+- **GitHub**: [Filament-Vite-Challenge](https://github.com/umair-afzal-uat/Filament-Vite-Challenge)
 
 ## Acknowledgments
 - **Filament**: For providing an excellent admin panel package.
