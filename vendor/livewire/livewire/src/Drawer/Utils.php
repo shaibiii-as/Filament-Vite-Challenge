@@ -2,6 +2,7 @@
 
 namespace Livewire\Drawer;
 
+use Illuminate\Http\Request;
 use Livewire\Exceptions\RootTagMissingFromViewException;
 
 use Livewire\Features\SupportFileUploads\FileUploadConfiguration;
@@ -50,11 +51,12 @@ class Utils extends BaseUtils
         return htmlspecialchars(json_encode($subject), ENT_QUOTES|ENT_SUBSTITUTE);
     }
 
-    static function pretendResponseIsFile($file, $mimeType = 'application/javascript')
+    static function pretendResponseIsFile($file, $contentType = 'application/javascript; charset=utf-8')
     {
         $lastModified = filemtime($file);
-        $headers = static::pretendedResponseIsFileHeaders($file, $mimeType, $lastModified);
-        return response()->file($file, $headers);
+
+        return static::cachedFileResponse($file, $contentType, $lastModified,
+            fn ($headers) => response()->file($file, $headers));
     }
 
     static function pretendPreviewResponseIsPreviewFile($filename)
@@ -64,24 +66,24 @@ class Utils extends BaseUtils
         $mimeType = FileUploadConfiguration::mimeType($filename);
         $lastModified = FileUploadConfiguration::lastModified($file);
 
-        $headers = self::pretendedResponseIsFileHeaders($filename, $mimeType, $lastModified);
-        return $storage->download($file, $filename, $headers);
+        return self::cachedFileResponse($filename, $mimeType, $lastModified,
+            fn ($headers) => $storage->download($file, $filename, $headers));
     }
 
-    static private function pretendedResponseIsFileHeaders($filename, $mimeType, $lastModified)
+    static private function cachedFileResponse($filename, $contentType, $lastModified, $downloadCallback)
     {
         $expires = strtotime('+1 year');
         $cacheControl = 'public, max-age=31536000';
 
         if (static::matchesCache($lastModified)) {
-            return response()->make('', 304, [
+            return response('', 304, [
                 'Expires' => static::httpDate($expires),
                 'Cache-Control' => $cacheControl,
             ]);
         }
 
         $headers = [
-            'Content-Type' => "$mimeType; charset=utf-8",
+            'Content-Type' => $contentType,
             'Expires' => static::httpDate($expires),
             'Cache-Control' => $cacheControl,
             'Last-Modified' => static::httpDate($lastModified),
@@ -91,14 +93,14 @@ class Utils extends BaseUtils
             $headers['Content-Encoding'] = 'br';
         }
 
-        return $headers;
+        return $downloadCallback($headers);
     }
 
     static function matchesCache($lastModified)
     {
-        $ifModifiedSince = $_SERVER['HTTP_IF_MODIFIED_SINCE'] ?? '';
+        $ifModifiedSince = app(Request::class)->header('if-modified-since');
 
-        return @strtotime($ifModifiedSince) === $lastModified;
+        return $ifModifiedSince !== null && @strtotime($ifModifiedSince) === $lastModified;
     }
 
     static function httpDate($timestamp)
@@ -174,12 +176,18 @@ class Utils extends BaseUtils
 
     static function applyMiddleware(\Illuminate\Http\Request $request, $middleware = [])
     {
-        return (new \Illuminate\Pipeline\Pipeline(app()))
+        $response = (new \Illuminate\Pipeline\Pipeline(app()))
             ->send($request)
             ->through($middleware)
             ->then(function() {
                 return new \Illuminate\Http\Response();
             });
+
+        if ($response instanceof \Illuminate\Http\RedirectResponse) {
+            abort($response);
+        }
+
+        return $response;
     }
 
     static function extractAttributeDataFromHtml($html, $attribute)

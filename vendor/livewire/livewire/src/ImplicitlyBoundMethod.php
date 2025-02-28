@@ -7,7 +7,6 @@ use Illuminate\Contracts\Routing\UrlRoutable as ImplicitlyBindable;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use ReflectionClass;
 use ReflectionNamedType;
-use UnitEnum;
 
 class ImplicitlyBoundMethod extends BoundMethod
 {
@@ -104,7 +103,7 @@ class ImplicitlyBoundMethod extends BoundMethod
     protected static function getImplicitBinding($container, $className, $value)
     {
         if ((new ReflectionClass($className))->isEnum()) {
-            return $className::from($value);
+            return $className::tryFrom($value);
         }
 
         $model = $container->make($className)->resolveRouteBinding($value);
